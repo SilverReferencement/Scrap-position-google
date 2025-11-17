@@ -1,0 +1,60 @@
+name: Scraping Positions Google
+
+on:
+  # Exécution hebdomadaire : tous les lundis à 8h00 (heure de Paris)
+  schedule:
+    - cron: '0 7 * * 1'  # 7h UTC = 8h Paris (heure d'hiver) / 9h Paris (heure d'été)
+
+  # Exécution manuelle à la demande
+  workflow_dispatch:
+
+jobs:
+  scrape-positions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Installation de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Installation des dépendances
+        run: npm ci
+
+      - name: 🔑 Configuration des credentials Google
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
+
+      - name: ⚙️ Configuration de l'environnement
+        run: |
+          echo "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" >> .env
+          echo "SHEET_NAME=${{ secrets.SHEET_NAME }}" >> .env
+          echo "SERPAPI_KEY=${{ secrets.SERPAPI_KEY }}" >> .env
+          echo "TARGET_DOMAIN=fix-my-kea.com" >> .env
+
+      - name: 🚀 Exécution du scraping avec SerpApi
+        run: npm start
+        env:
+          NODE_ENV: production
+
+      - name: 🧹 Nettoyage des credentials
+        if: always()
+        run: |
+          rm -f credentials.json
+          rm -f .env
+
+      - name: ✅ Notification de succès
+        if: success()
+        run: |
+          echo "✅ Scraping terminé avec succès!"
+          echo "📊 Vérifiez votre Google Sheet pour les résultats."
+
+      - name: ❌ Notification d'échec
+        if: failure()
+        run: |
+          echo "❌ Le scraping a échoué."
+          echo "📝 Consultez les logs ci-dessus pour plus de détails."

@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+credentials.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Screenshots and debug files
+*.png
+*.jpg
+test-results/
+
+# IDE
+.vscode/
+.idea/

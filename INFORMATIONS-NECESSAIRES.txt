@@ -1,0 +1,75 @@
+================================================================================
+📝 INFORMATIONS À ME FOURNIR POUR FINALISER L'AUTOMATISATION
+================================================================================
+
+Quand vous serez prêt à déployer sur GitHub, j'aurai besoin de ces informations :
+
+1. 🔑 ID DE VOTRE GOOGLE SHEET
+   ────────────────────────────
+   Format : 1iU7CXCNQkJeYlY6Sm-LHU2DFmI_H4LFzp_TRm7SWb4s
+
+   Où le trouver ?
+   → Dans l'URL de votre Google Sheet :
+     https://docs.google.com/spreadsheets/d/[ICI_L'ID]/edit
+
+   → À copier-coller ici : _________________________________________
+
+
+2. 📊 NOM DE L'ONGLET DANS VOTRE SHEET
+   ────────────────────────────────────
+   Exemple : "Feuille 1", "Positions", "Tracking", etc.
+
+   → À copier-coller ici : _________________________________________
+
+
+3. 🔗 URL DE VOTRE REPOSITORY GITHUB (une fois créé)
+   ──────────────────────────────────────────────────
+   Format : https://github.com/VotreUsername/automatisation-positions-google.git
+
+   Comment le créer ?
+   1. Aller sur https://github.com/new
+   2. Nom : automatisation-positions-google (ou autre)
+   3. Visibilité : PRIVÉ (important !)
+   4. Ne PAS cocher "Add a README file"
+   5. Créer le repository
+   6. Copier l'URL affichée
+
+   → À copier-coller ici : _________________________________________
+
+
+================================================================================
+✅ AVANT DE ME CONTACTER
+================================================================================
+
+Assurez-vous d'avoir fait ces étapes :
+
+☐ Google Sheet créé avec structure correcte (Colonne A = mots-clés)
+☐ Sheet partagé avec : ikea-scraper-bot@my-project-1515074611155.iam.gserviceaccount.com
+☐ Mots-clés ajoutés dans la colonne A (à partir de A2)
+☐ Fichier .env modifié avec votre SPREADSHEET_ID
+☐ Test local réussi (2_tester.bat)
+☐ Repository GitHub créé (privé)
+
+================================================================================
+🚀 COMMANDES À EXÉCUTER APRÈS
+================================================================================
+
+Une fois que je vous aurai confirmé que tout est ok, vous devrez exécuter :
+
+1. Double-cliquer sur setup-github.bat
+
+2. Dans le terminal qui s'ouvre, exécuter (remplacer [URL] par votre URL) :
+   git remote add origin [URL]
+   git push -u origin main
+
+3. Configurer les 3 secrets dans GitHub (je vous guiderai)
+
+================================================================================
+📞 QUAND ME CONTACTER
+================================================================================
+
+→ Après avoir complété la checklist ci-dessus
+→ Avec les 3 informations notées en haut de ce fichier
+→ Si vous rencontrez un problème durant les tests locaux
+
+================================================================================
