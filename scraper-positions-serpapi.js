@@ -194,86 +194,73 @@ async function searchPosition(keyword, countryCode) {
             }
         }
 
-        // Appel à SerpApi avec Google Light Search (jusqu'à 200 résultats = 2 pages)
-        const response = await axios.get('https://serpapi.com/search', {
-            params: {
-                engine: 'google',
-                q: keyword,
-                gl: config.gl,
-                hl: config.hl,
-                num: 100, // 100 résultats par page (max)
-                start: 0,
-                no_cache: false,
-                api_key: currentApiKey
-            },
-            timeout: 20000
-        });
+        // Rechercher sur plusieurs pages jusqu'à 200 résultats
+        let allResults = [];
+        let currentPage = 0;
+        const maxPages = 20; // 20 pages × 10 résultats = 200 résultats max
 
-        // Mettre à jour le quota à partir de la réponse
-        if (response.data.search_metadata?.total_searches_left !== undefined) {
-            apiKeyQuotas[apiKeyIndex] = response.data.search_metadata.total_searches_left;
-        }
-
-        // Si quota dépassé dans la réponse, basculer sur la clé suivante
-        if (response.data.error && response.data.error.includes('exceeded')) {
-            console.log(`    ⚠️  Quota dépassé sur clé #${apiKeyIndex + 1}, basculement...`);
-            apiKeyQuotas[apiKeyIndex] = 0; // Marquer comme épuisé
-            if (switchToNextApiKey()) {
-                return await searchPosition(keyword, countryCode);
-            } else {
-                return 'Erreur: Tous les quotas épuisés';
-            }
-        }
-
-        let results = response.data.organic_results || [];
-
-        if (results.length === 0) {
-            console.log(`    ⚠️ Aucun résultat`);
-            return 'N/A';
-        }
-
-        // Chercher le domaine cible dans les 100 premiers résultats
-        let position = -1;
-        for (let i = 0; i < results.length; i++) {
-            const link = results[i].link || '';
-            if (link.includes(TARGET_DOMAIN)) {
-                position = i + 1;
-                console.log(`    ✓ Position: ${position} (page 1)`);
-                return position;
-            }
-        }
-
-        // Si pas trouvé dans les 100 premiers, chercher dans les 100 suivants (page 2)
-        try {
-            const response2 = await axios.get('https://serpapi.com/search', {
+        // Boucle pour récupérer toutes les pages
+        while (currentPage < maxPages && allResults.length < 200) {
+            const response = await axios.get('https://serpapi.com/search', {
                 params: {
                     engine: 'google',
                     q: keyword,
                     gl: config.gl,
                     hl: config.hl,
-                    num: 100,
-                    start: 100, // Page 2
+                    num: 10, // 10 résultats par page (plus fiable)
+                    start: currentPage * 10,
                     no_cache: false,
                     api_key: currentApiKey
                 },
                 timeout: 20000
             });
 
-            const results2 = response2.data.organic_results || [];
+            // Mettre à jour le quota à partir de la réponse
+            if (response.data.search_metadata?.total_searches_left !== undefined) {
+                apiKeyQuotas[apiKeyIndex] = response.data.search_metadata.total_searches_left;
+            }
 
-            for (let i = 0; i < results2.length; i++) {
-                const link = results2[i].link || '';
+            // Si quota dépassé dans la réponse, basculer sur la clé suivante
+            if (response.data.error && response.data.error.includes('exceeded')) {
+                console.log(`    ⚠️  Quota dépassé sur clé #${apiKeyIndex + 1}, basculement...`);
+                apiKeyQuotas[apiKeyIndex] = 0;
+                if (switchToNextApiKey()) {
+                    return await searchPosition(keyword, countryCode);
+                } else {
+                    return 'Erreur: Tous les quotas épuisés';
+                }
+            }
+
+            const pageResults = response.data.organic_results || [];
+
+            // Si plus de résultats, arrêter
+            if (pageResults.length === 0) {
+                break;
+            }
+
+            // Ajouter les résultats de cette page
+            allResults = allResults.concat(pageResults);
+
+            // Chercher le domaine cible dans cette page
+            for (let i = 0; i < pageResults.length; i++) {
+                const link = pageResults[i].link || '';
                 if (link.includes(TARGET_DOMAIN)) {
-                    position = 100 + i + 1;
-                    console.log(`    ✓ Position: ${position} (page 2)`);
+                    const position = currentPage * 10 + i + 1;
+                    const pageNum = Math.floor(position / 10) + 1;
+                    console.log(`    ✓ Position: ${position} (page ${pageNum})`);
                     return position;
                 }
             }
-        } catch (e) {
-            console.log(`    ⚠️  Erreur page 2, recherche limitée à la page 1`);
+
+            currentPage++;
+
+            // Petit délai entre les pages pour éviter le rate limiting
+            if (currentPage < maxPages && allResults.length < 200) {
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
         }
 
-        console.log(`    ✗ Non trouvé dans les 200 premiers résultats`);
+        console.log(`    ✗ Non trouvé dans les ${allResults.length} premiers résultats`);
         return 'N/A';
 
     } catch (error) {
