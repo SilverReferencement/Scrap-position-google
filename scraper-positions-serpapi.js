@@ -1,6 +1,7 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const axios = require('axios');
+const { translate } = require('@vitalets/google-translate-api');
 require('dotenv').config();
 
 // Configuration
@@ -38,42 +39,49 @@ const COUNTRIES = {
         name: 'France',
         gl: 'fr',
         hl: 'fr',
+        lang: 'fr', // Code langue pour traduction
         column: 1 // Colonne B
     },
     US: {
         name: 'États-Unis',
         gl: 'us',
         hl: 'en',
+        lang: 'en', // Code langue pour traduction
         column: 2 // Colonne C
     },
     DE: {
         name: 'Allemagne',
         gl: 'de',
         hl: 'de',
+        lang: 'de', // Code langue pour traduction
         column: 3 // Colonne D
     },
     UK: {
         name: 'Royaume-Uni',
         gl: 'uk',
         hl: 'en',
+        lang: 'en', // Code langue pour traduction
         column: 4 // Colonne E
     },
     IT: {
         name: 'Italie',
         gl: 'it',
         hl: 'it',
+        lang: 'it', // Code langue pour traduction
         column: 5 // Colonne F
     },
     NL: {
         name: 'Pays-Bas',
         gl: 'nl',
         hl: 'nl',
+        lang: 'nl', // Code langue pour traduction
         column: 6 // Colonne G
     },
     ES: {
         name: 'Espagne',
         gl: 'es',
         hl: 'es',
+        lang: 'es', // Code langue pour traduction
         column: 7 // Colonne H
     }
 };
@@ -150,6 +158,56 @@ function displayQuotas() {
 }
 
 /**
+ * Traduit un texte dans la langue cible
+ * Cache les traductions pour éviter les appels répétés
+ */
+const translationCache = {};
+
+async function translateText(text, targetLang) {
+    // Créer une clé de cache unique
+    const cacheKey = `${text}_${targetLang}`;
+
+    // Vérifier si la traduction est en cache
+    if (translationCache[cacheKey]) {
+        return translationCache[cacheKey];
+    }
+
+    try {
+        const result = await translate(text, { to: targetLang });
+        const translated = result.text;
+
+        // Mettre en cache
+        translationCache[cacheKey] = translated;
+
+        return translated;
+    } catch (error) {
+        console.error(`    ⚠️  Erreur de traduction vers ${targetLang}: ${error.message}`);
+        // En cas d'erreur, retourner le texte original
+        return text;
+    }
+}
+
+/**
+ * Détermine le terme de recherche à utiliser :
+ * - Si commence par "ikea" (insensible à la casse) : utilise le terme tel quel
+ * - Sinon : traduit le terme dans la langue du pays
+ */
+async function getSearchTerm(originalKeyword, countryConfig) {
+    const keyword = originalKeyword.trim();
+
+    // Cas 1 : Si commence par "ikea" (insensible à la casse)
+    if (keyword.toLowerCase().startsWith('ikea')) {
+        return keyword; // Retourner tel quel
+    }
+
+    // Cas 2 : Traduire le terme
+    const targetLang = countryConfig.lang;
+    const translatedKeyword = await translateText(keyword, targetLang);
+
+    return translatedKeyword;
+}
+
+/**
  * Bascule sur la clé API suivante avec le plus de quota disponible
  */
 function switchToNextApiKey() {
@@ -182,7 +240,11 @@ function switchToNextApiKey() {
 async function searchPosition(keyword, countryCode) {
     try {
         const config = COUNTRIES[countryCode];
-        console.log(`  → Recherche "${keyword}" sur Google ${config.name}...`);
+
+        // Déterminer le terme de recherche (original si commence par "ikea", sinon traduit)
+        const searchTerm = await getSearchTerm(keyword, config);
+        const displayInfo = searchTerm !== keyword ? ` [traduit: "${searchTerm}"]` : '';
+        console.log(`  → Recherche "${keyword}"${displayInfo} sur Google ${config.name}...`);
 
         // Vérifier le quota avant de faire la recherche
         if (apiKeyQuotas[apiKeyIndex] !== null && apiKeyQuotas[apiKeyIndex] <= 0) {
@@ -204,7 +266,7 @@ async function searchPosition(keyword, countryCode) {
             const response = await axios.get('https://serpapi.com/search', {
                 params: {
                     engine: 'google',
-                    q: keyword,
+                    q: searchTerm,
                     gl: config.gl,
                     hl: config.hl,
                     num: 10, // 10 résultats par page (plus fiable)
