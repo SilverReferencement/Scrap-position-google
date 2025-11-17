@@ -256,6 +256,17 @@ async function main() {
     if (alreadyScrapedToday) {
         console.log(`📅 Données déjà scrapées aujourd'hui (${dateStr})`);
         console.log(`   → Les cellules déjà remplies seront ignorées\n`);
+
+        // Toujours mettre à jour TOUS les en-têtes (au cas où de nouveaux pays ont été ajoutés)
+        console.log(`📝 Mise à jour des en-têtes pour tous les pays...\n`);
+        sheet.getCell(0, 1).value = `France (${dateStr})`;
+        sheet.getCell(0, 2).value = `États-Unis (${dateStr})`;
+        sheet.getCell(0, 3).value = `Allemagne (${dateStr})`;
+        sheet.getCell(0, 4).value = `Royaume-Uni (${dateStr})`;
+        sheet.getCell(0, 5).value = `Italie (${dateStr})`;
+        sheet.getCell(0, 6).value = `Pays-Bas (${dateStr})`;
+        sheet.getCell(0, 7).value = `Espagne (${dateStr})`;
+        await sheet.saveUpdatedCells();
     } else {
         console.log(`📅 Mise à jour des en-têtes avec la date: ${dateStr}\n`);
         sheet.getCell(0, 1).value = `France (${dateStr})`;
