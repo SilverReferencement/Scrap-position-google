@@ -34,6 +34,7 @@ jobs:
           echo "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" >> .env
           echo "SHEET_NAME=${{ secrets.SHEET_NAME }}" >> .env
           echo "SERPAPI_KEY=${{ secrets.SERPAPI_KEY }}" >> .env
+          echo "SERPAPI_KEY2=${{ secrets.SERPAPI_KEY2 }}" >> .env
           echo "TARGET_DOMAIN=fix-my-kea.com" >> .env
 
       - name: 🚀 Exécution du scraping avec SerpApi

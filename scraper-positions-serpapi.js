@@ -7,7 +7,14 @@ require('dotenv').config();
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_NAME = process.env.SHEET_NAME || 'Feuille 1';
 const TARGET_DOMAIN = process.env.TARGET_DOMAIN || 'fix-my-kea.com';
+
+// Support de 2 clés API SerpApi (500 recherches gratuites total)
 const SERPAPI_KEY = process.env.SERPAPI_KEY;
+const SERPAPI_KEY2 = process.env.SERPAPI_KEY2; // Optionnelle (2e compte)
+
+// Rotation des clés API
+let currentApiKey = SERPAPI_KEY;
+let apiKeyIndex = 1;
 
 // Configuration des pays pour SerpApi
 const COUNTRIES = {
@@ -18,7 +25,7 @@ const COUNTRIES = {
         column: 1 // Colonne B
     },
     US: {
-        name: 'USA',
+        name: 'États-Unis',
         gl: 'us',
         hl: 'en',
         column: 2 // Colonne C
@@ -40,6 +47,18 @@ const COUNTRIES = {
         gl: 'it',
         hl: 'it',
         column: 5 // Colonne F
+    },
+    NL: {
+        name: 'Pays-Bas',
+        gl: 'nl',
+        hl: 'nl',
+        column: 6 // Colonne G
+    },
+    ES: {
+        name: 'Espagne',
+        gl: 'es',
+        hl: 'es',
+        column: 7 // Colonne H
     }
 };
 
@@ -72,45 +91,86 @@ const serviceAccountAuth = new JWT({
 
 /**
  * Recherche la position d'un domaine via SerpApi (Google Light Search)
+ * Supporte jusqu'à 200 résultats (2 pages Google)
  */
 async function searchPosition(keyword, countryCode) {
     try {
         const config = COUNTRIES[countryCode];
         console.log(`  → Recherche "${keyword}" sur Google ${config.name}...`);
 
-        // Appel à SerpApi avec Google Light Search (plus rapide et moins cher)
+        // Appel à SerpApi avec Google Light Search (jusqu'à 200 résultats = 2 pages)
         const response = await axios.get('https://serpapi.com/search', {
             params: {
                 engine: 'google',
                 q: keyword,
                 gl: config.gl,
                 hl: config.hl,
-                num: 100,
-                no_cache: false, // Utiliser le cache si disponible
-                api_key: SERPAPI_KEY
+                num: 100, // 100 résultats par page (max)
+                start: 0,
+                no_cache: false,
+                api_key: currentApiKey
             },
-            timeout: 20000 // Timeout réduit car plus rapide
+            timeout: 20000
         });
 
-        const results = response.data.organic_results || [];
+        // Si quota dépassé sur la clé actuelle, basculer sur la clé 2
+        if (response.data.error?.includes('exceeded') && SERPAPI_KEY2 && currentApiKey === SERPAPI_KEY) {
+            console.log(`    ⚠️  Quota dépassé sur clé API #1, basculement sur clé #2...`);
+            currentApiKey = SERPAPI_KEY2;
+            apiKeyIndex = 2;
+            // Réessayer avec la 2e clé
+            return await searchPosition(keyword, countryCode);
+        }
+
+        let results = response.data.organic_results || [];
 
         if (results.length === 0) {
             console.log(`    ⚠️ Aucun résultat`);
             return 'N/A';
         }
 
-        // Chercher le domaine cible (s'arrête dès qu'il trouve)
+        // Chercher le domaine cible dans les 100 premiers résultats
         let position = -1;
         for (let i = 0; i < results.length; i++) {
             const link = results[i].link || '';
             if (link.includes(TARGET_DOMAIN)) {
                 position = i + 1;
-                console.log(`    ✓ Position: ${position}`);
-                return position; // Arrêt immédiat
+                console.log(`    ✓ Position: ${position} (page 1)`);
+                return position;
             }
         }
 
-        console.log(`    ✗ Non trouvé dans les ${results.length} résultats`);
+        // Si pas trouvé dans les 100 premiers, chercher dans les 100 suivants (page 2)
+        try {
+            const response2 = await axios.get('https://serpapi.com/search', {
+                params: {
+                    engine: 'google',
+                    q: keyword,
+                    gl: config.gl,
+                    hl: config.hl,
+                    num: 100,
+                    start: 100, // Page 2
+                    no_cache: false,
+                    api_key: currentApiKey
+                },
+                timeout: 20000
+            });
+
+            const results2 = response2.data.organic_results || [];
+
+            for (let i = 0; i < results2.length; i++) {
+                const link = results2[i].link || '';
+                if (link.includes(TARGET_DOMAIN)) {
+                    position = 100 + i + 1;
+                    console.log(`    ✓ Position: ${position} (page 2)`);
+                    return position;
+                }
+            }
+        } catch (e) {
+            console.log(`    ⚠️  Erreur page 2, recherche limitée à la page 1`);
+        }
+
+        console.log(`    ✗ Non trouvé dans les 200 premiers résultats`);
         return 'N/A';
 
     } catch (error) {
@@ -119,6 +179,13 @@ async function searchPosition(keyword, countryCode) {
         if (error.response?.status === 401) {
             return 'Erreur: Clé API invalide';
         } else if (error.response?.status === 429) {
+            // Si quota dépassé et on a une 2e clé, basculer
+            if (SERPAPI_KEY2 && currentApiKey === SERPAPI_KEY) {
+                console.log(`    ⚠️  Quota dépassé sur clé API #1, basculement sur clé #2...`);
+                currentApiKey = SERPAPI_KEY2;
+                apiKeyIndex = 2;
+                return await searchPosition(keyword, countryCode);
+            }
             return 'Erreur: Quota dépassé';
         }
 
@@ -154,7 +221,7 @@ async function main() {
     // Lire les mots-clés depuis la colonne A
     console.log('📝 Lecture des mots-clés depuis la colonne A...');
     const maxRows = Math.min(sheet.rowCount, 1000);
-    await sheet.loadCells(`A1:F${maxRows}`);
+    await sheet.loadCells(`A1:H${maxRows}`); // Jusqu'à la colonne H (Espagne)
 
     const keywords = [];
     let rowIndex = 1; // Commence à la ligne 2 (index 1)
@@ -192,10 +259,12 @@ async function main() {
     } else {
         console.log(`📅 Mise à jour des en-têtes avec la date: ${dateStr}\n`);
         sheet.getCell(0, 1).value = `France (${dateStr})`;
-        sheet.getCell(0, 2).value = `USA (${dateStr})`;
+        sheet.getCell(0, 2).value = `États-Unis (${dateStr})`;
         sheet.getCell(0, 3).value = `Allemagne (${dateStr})`;
-        sheet.getCell(0, 4).value = `UK (${dateStr})`;
+        sheet.getCell(0, 4).value = `Royaume-Uni (${dateStr})`;
         sheet.getCell(0, 5).value = `Italie (${dateStr})`;
+        sheet.getCell(0, 6).value = `Pays-Bas (${dateStr})`;
+        sheet.getCell(0, 7).value = `Espagne (${dateStr})`;
         await sheet.saveUpdatedCells();
     }
 
@@ -254,6 +323,9 @@ async function main() {
     console.log(`\n✅ Scraping terminé!`);
     console.log(`📊 ${keywords.length} mots-clés traités`);
     console.log(`✅ ${totalSearches} nouvelles recherches effectuées`);
+    if (SERPAPI_KEY2) {
+        console.log(`🔑 Clé API utilisée: #${apiKeyIndex}`);
+    }
     if (skippedSearches > 0) {
         console.log(`⏭️  ${skippedSearches} recherches ignorées (déjà faites aujourd'hui)`);
         console.log(`💰 Crédits économisés: ${skippedSearches}`);
