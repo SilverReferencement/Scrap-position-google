@@ -189,14 +189,14 @@ async function translateText(text, targetLang) {
 
 /**
  * Détermine le terme de recherche à utiliser :
- * - Si commence par "ikea" (insensible à la casse) : utilise le terme tel quel
+ * - Si commence par "ikea" ou "Ikea" (casse exacte) : utilise le terme tel quel
  * - Sinon : traduit le terme dans la langue du pays
  */
 async function getSearchTerm(originalKeyword, countryConfig) {
     const keyword = originalKeyword.trim();
 
-    // Cas 1 : Si commence par "ikea" (insensible à la casse)
-    if (keyword.toLowerCase().startsWith('ikea')) {
+    // Cas 1 : Si commence par "ikea" ou "Ikea" (casse exacte)
+    if (keyword.startsWith('ikea') || keyword.startsWith('Ikea')) {
         return keyword; // Retourner tel quel
     }
 
