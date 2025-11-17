@@ -346,35 +346,43 @@ async function main() {
     const today = new Date();
     const dateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getFullYear()).slice(-2)}`;
 
-    // Vérifier si les en-têtes sont déjà à jour avec la date du jour
-    const headerB1 = sheet.getCell(0, 1).value?.toString() || '';
-    const alreadyScrapedToday = headerB1.includes(dateStr);
+    // Trouver la première colonne disponible (après la colonne A)
+    // Chercher si la date du jour existe déjà dans les en-têtes
+    let startColumn = 1; // Par défaut colonne B
+    let alreadyScrapedToday = false;
 
-    if (alreadyScrapedToday) {
-        console.log(`📅 Données déjà scrapées aujourd'hui (${dateStr})`);
-        console.log(`   → Les cellules déjà remplies seront ignorées\n`);
+    // Parcourir les en-têtes pour trouver la date du jour ou la première colonne vide
+    for (let col = 1; col < 100; col += 7) { // Parcourir par blocs de 7 colonnes
+        const headerValue = sheet.getCell(0, col).value?.toString() || '';
 
-        // Toujours mettre à jour TOUS les en-têtes (au cas où de nouveaux pays ont été ajoutés)
-        console.log(`📝 Mise à jour des en-têtes pour tous les pays...\n`);
-        sheet.getCell(0, 1).value = `France (${dateStr})`;
-        sheet.getCell(0, 2).value = `États-Unis (${dateStr})`;
-        sheet.getCell(0, 3).value = `Allemagne (${dateStr})`;
-        sheet.getCell(0, 4).value = `Royaume-Uni (${dateStr})`;
-        sheet.getCell(0, 5).value = `Italie (${dateStr})`;
-        sheet.getCell(0, 6).value = `Pays-Bas (${dateStr})`;
-        sheet.getCell(0, 7).value = `Espagne (${dateStr})`;
-        await sheet.saveUpdatedCells();
-    } else {
-        console.log(`📅 Mise à jour des en-têtes avec la date: ${dateStr}\n`);
-        sheet.getCell(0, 1).value = `France (${dateStr})`;
-        sheet.getCell(0, 2).value = `États-Unis (${dateStr})`;
-        sheet.getCell(0, 3).value = `Allemagne (${dateStr})`;
-        sheet.getCell(0, 4).value = `Royaume-Uni (${dateStr})`;
-        sheet.getCell(0, 5).value = `Italie (${dateStr})`;
-        sheet.getCell(0, 6).value = `Pays-Bas (${dateStr})`;
-        sheet.getCell(0, 7).value = `Espagne (${dateStr})`;
-        await sheet.saveUpdatedCells();
+        if (headerValue.includes(dateStr)) {
+            // Date du jour trouvée
+            startColumn = col;
+            alreadyScrapedToday = true;
+            console.log(`📅 Données déjà scrapées aujourd'hui (${dateStr}) - Colonnes ${col + 1} à ${col + 7}`);
+            console.log(`   → Les cellules déjà remplies seront ignorées\n`);
+            break;
+        } else if (headerValue === '' || headerValue === null) {
+            // Première colonne vide trouvée = nouveau jour
+            startColumn = col;
+            console.log(`📅 Nouveau jour de scraping: ${dateStr}`);
+            console.log(`   → Ajout de 7 nouvelles colonnes (${col + 1} à ${col + 7}) pour conserver l'historique\n`);
+            break;
+        }
     }
+
+    // Mettre à jour les en-têtes pour les 7 pays
+    const countryNames = ['France', 'États-Unis', 'Allemagne', 'Royaume-Uni', 'Italie', 'Pays-Bas', 'Espagne'];
+    for (let i = 0; i < 7; i++) {
+        sheet.getCell(0, startColumn + i).value = `${countryNames[i]} (${dateStr})`;
+    }
+    await sheet.saveUpdatedCells();
+
+    // Mettre à jour les colonnes dans COUNTRIES pour pointer vers les bonnes colonnes
+    const countryKeys = ['FR', 'US', 'DE', 'UK', 'IT', 'NL', 'ES'];
+    countryKeys.forEach((key, index) => {
+        COUNTRIES[key].column = startColumn + index;
+    });
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
