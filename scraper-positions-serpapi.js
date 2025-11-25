@@ -538,11 +538,29 @@ async function main() {
 
     // Extraire toutes les dates des en-têtes de la feuille principale
     console.log('   → Extraction de toutes les dates historiques...');
+
+    // Fonction pour convertir index de colonne en lettre Excel (0->A, 25->Z, 26->AA, etc.)
+    function columnToLetter(column) {
+        let temp, letter = '';
+        while (column >= 0) {
+            temp = column % 26;
+            letter = String.fromCharCode(temp + 65) + letter;
+            column = Math.floor(column / 26) - 1;
+        }
+        return letter;
+    }
+
+    // Charger toutes les colonnes pour lire les en-têtes historiques (jusqu'à 200 colonnes)
+    const maxCols = Math.min(sheet.columnCount, 200);
+    const colLetter = columnToLetter(maxCols - 1);
+    console.log(`   → Chargement des cellules A1:${colLetter}${maxRows}...`);
+    await sheet.loadCells(`A1:${colLetter}${maxRows}`);
+
     const dateRegex = /\((\d{2}\/\d{2}\/\d{2})\)/; // Regex pour extraire (DD/MM/YY)
     const dateSums = {}; // { "25/11/25": { sum: 0, columns: [1, 2, 3...] } }
 
     // Parcourir les en-têtes (ligne 1) pour trouver toutes les dates
-    for (let col = 1; col < Math.min(sheet.columnCount, 200); col++) {
+    for (let col = 1; col < maxCols; col++) {
         const headerCell = sheet.getCell(0, col);
         const headerValue = headerCell.value?.toString() || '';
 
