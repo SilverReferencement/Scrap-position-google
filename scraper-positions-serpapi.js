@@ -530,12 +530,13 @@ async function main() {
         graphSheet = await doc.addSheet({ title: 'Graphique' });
 
         // Ajouter les en-têtes
-        await graphSheet.loadCells('A1:E1');
+        await graphSheet.loadCells('A1:F1');
         graphSheet.getCell(0, 0).value = 'Date';
         graphSheet.getCell(0, 1).value = 'Somme de toutes les positions';
         graphSheet.getCell(0, 2).value = 'Moyenne = 1';
-        graphSheet.getCell(0, 3).value = 'Moyenne = 2';
-        graphSheet.getCell(0, 4).value = 'Moyenne = 3';
+        graphSheet.getCell(0, 3).value = 'Moyenne = 1.5';
+        graphSheet.getCell(0, 4).value = 'Moyenne = 2';
+        graphSheet.getCell(0, 5).value = 'Moyenne = 3';
         await graphSheet.saveUpdatedCells();
     }
 
@@ -616,13 +617,15 @@ async function main() {
 
     // Calculer les moyennes théoriques
     const totalItems = keywords.length * 7; // 45 SKU × 7 pays = 315
-    const average1 = totalItems * 1; // Moyenne position 1 = 315
-    const average2 = totalItems * 2; // Moyenne position 2 = 630
-    const average3 = totalItems * 3; // Moyenne position 3 = 945
+    const average1 = totalItems * 1; // Moyenne position 1 = 315 (Rouge - très difficile)
+    const average1_5 = totalItems * 1.5; // Moyenne position 1.5 = 472.5 (Orange - difficile)
+    const average2 = totalItems * 2; // Moyenne position 2 = 630 (Jaune - moyen)
+    const average3 = totalItems * 3; // Moyenne position 3 = 945 (Vert - facile)
 
-    console.log(`   → Moyenne = 1 (vert): ${average1}`);
-    console.log(`   → Moyenne = 2 (orange): ${average2}`);
-    console.log(`   → Moyenne = 3 (rouge): ${average3}`);
+    console.log(`   → Moyenne = 1 (rouge): ${average1}`);
+    console.log(`   → Moyenne = 1.5 (orange): ${average1_5}`);
+    console.log(`   → Moyenne = 2 (jaune): ${average2}`);
+    console.log(`   → Moyenne = 3 (vert): ${average3}`);
 
     // Trier les dates par ordre chronologique (DD/MM/YY)
     const sortedDates = Object.keys(dateSums).sort((a, b) => {
@@ -639,7 +642,7 @@ async function main() {
     console.log(`   → Dates triées par ordre chronologique: ${sortedDates.join(', ')}`);
 
     // Charger la feuille Graphique (fraîchement pour éviter les conflits)
-    await graphSheet.loadCells('A1:E1000');
+    await graphSheet.loadCells('A1:F1000');
 
     // Écrire toutes les dates dans l'ordre chronologique
     for (let i = 0; i < sortedDates.length; i++) {
@@ -647,12 +650,13 @@ async function main() {
         const data = dateSums[date];
         const rowIndex = i + 1; // Ligne 2, 3, 4, etc.
 
-        // Écrire la date, la somme et les 3 moyennes
+        // Écrire la date, la somme et les 4 moyennes
         graphSheet.getCell(rowIndex, 0).value = date;
         graphSheet.getCell(rowIndex, 1).value = data.sum;
-        graphSheet.getCell(rowIndex, 2).value = average1; // Colonne C : Moyenne = 1 (vert)
-        graphSheet.getCell(rowIndex, 3).value = average2; // Colonne D : Moyenne = 2 (orange)
-        graphSheet.getCell(rowIndex, 4).value = average3; // Colonne E : Moyenne = 3 (rouge)
+        graphSheet.getCell(rowIndex, 2).value = average1; // Colonne C : Moyenne = 1 (rouge - très difficile)
+        graphSheet.getCell(rowIndex, 3).value = average1_5; // Colonne D : Moyenne = 1.5 (orange - difficile)
+        graphSheet.getCell(rowIndex, 4).value = average2; // Colonne E : Moyenne = 2 (jaune - moyen)
+        graphSheet.getCell(rowIndex, 5).value = average3; // Colonne F : Moyenne = 3 (vert - facile)
     }
 
     await graphSheet.saveUpdatedCells();
