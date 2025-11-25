@@ -550,11 +550,12 @@ async function main() {
         return letter;
     }
 
-    // Charger toutes les colonnes pour lire les en-têtes historiques (jusqu'à 200 colonnes)
+    // Charger toutes les colonnes ET lignes pour pouvoir calculer les sommes
     const maxCols = Math.min(sheet.columnCount, 200);
+    const maxRowsForGraph = Math.min(sheet.rowCount, 1000);
     const colLetter = columnToLetter(maxCols - 1);
-    console.log(`   → Chargement des cellules A1:${colLetter}${maxRows}...`);
-    await sheet.loadCells(`A1:${colLetter}${maxRows}`);
+    console.log(`   → Chargement des données A1:${colLetter}${maxRowsForGraph} pour calcul des sommes...`);
+    await sheet.loadCells(`A1:${colLetter}${maxRowsForGraph}`);
 
     const dateRegex = /\((\d{2}\/\d{2}\/\d{2})\)/; // Regex pour extraire (DD/MM/YY)
     const dateSums = {}; // { "25/11/25": { sum: 0, columns: [1, 2, 3...] } }
