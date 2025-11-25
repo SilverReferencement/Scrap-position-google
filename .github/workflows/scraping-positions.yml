@@ -1,11 +1,11 @@
 name: Scraping Positions Google
 
 on:
-  # Exécution 3 fois par mois : les 5, 15 et 25 de chaque mois à 8h00 (heure de Paris)
+  # Exécution 3 fois par mois : les 5, 15 et 25 de chaque mois à 6h00 (heure de Paris)
   schedule:
-    - cron: '0 7 5 * *'   # Le 5 de chaque mois à 7h UTC (8h Paris hiver / 9h Paris été)
-    - cron: '0 7 15 * *'  # Le 15 de chaque mois à 7h UTC (8h Paris hiver / 9h Paris été)
-    - cron: '0 7 25 * *'  # Le 25 de chaque mois à 7h UTC (8h Paris hiver / 9h Paris été)
+    - cron: '0 5 5 * *'   # Le 5 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
+    - cron: '0 5 15 * *'  # Le 15 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
+    - cron: '0 5 25 * *'  # Le 25 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
 
   # Exécution manuelle à la demande
   workflow_dispatch:
@@ -37,6 +37,8 @@ jobs:
           echo "SHEET_NAME=${{ secrets.SHEET_NAME }}" >> .env
           echo "SERPAPI_KEY=${{ secrets.SERPAPI_KEY }}" >> .env
           echo "SERPAPI_KEY2=${{ secrets.SERPAPI_KEY2 }}" >> .env
+          echo "SERPAPI_KEY3=${{ secrets.SERPAPI_KEY3 }}" >> .env
+          echo "SERPAPI_KEY4=${{ secrets.SERPAPI_KEY4 }}" >> .env
           echo "TARGET_DOMAIN=fix-my-kea.com" >> .env
 
       - name: 🚀 Exécution du scraping avec SerpApi

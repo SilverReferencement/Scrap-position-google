@@ -380,7 +380,7 @@ async function main() {
     // Lire les mots-clés depuis la colonne A
     console.log('📝 Lecture des mots-clés depuis la colonne A...');
     const maxRows = Math.min(sheet.rowCount, 1000);
-    await sheet.loadCells(`A1:H${maxRows}`); // Jusqu'à la colonne H (Espagne)
+    await sheet.loadCells(`A1:H${maxRows}`); // Charger colonnes A à H
 
     const keywords = [];
     let rowIndex = 1; // Commence à la ligne 2 (index 1)
@@ -408,42 +408,40 @@ async function main() {
     const today = new Date();
     const dateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getFullYear()).slice(-2)}`;
 
-    // Trouver la première colonne disponible (après la colonne A)
-    // Chercher si la date du jour existe déjà dans les en-têtes
-    let startColumn = 1; // Par défaut colonne B
+    // Vérifier si la colonne B contient déjà la date du jour
     let alreadyScrapedToday = false;
+    const headerB1 = sheet.getCell(0, 1).value?.toString() || '';
 
-    // Parcourir les en-têtes pour trouver la date du jour ou la première colonne vide
-    for (let col = 1; col < 100; col += 7) { // Parcourir par blocs de 7 colonnes
-        const headerValue = sheet.getCell(0, col).value?.toString() || '';
+    if (headerB1.includes(dateStr)) {
+        // Date du jour déjà dans B1
+        alreadyScrapedToday = true;
+        console.log(`📅 Données déjà scrapées aujourd'hui (${dateStr}) - Colonnes B à H`);
+        console.log(`   → Les cellules déjà remplies seront ignorées\n`);
+    } else {
+        // Nouveau jour : insérer 7 nouvelles colonnes après A
+        console.log(`📅 Nouveau jour de scraping: ${dateStr}`);
+        console.log(`   → Insertion de 7 nouvelles colonnes après A pour conserver l'historique`);
 
-        if (headerValue.includes(dateStr)) {
-            // Date du jour trouvée
-            startColumn = col;
-            alreadyScrapedToday = true;
-            console.log(`📅 Données déjà scrapées aujourd'hui (${dateStr}) - Colonnes ${col + 1} à ${col + 7}`);
-            console.log(`   → Les cellules déjà remplies seront ignorées\n`);
-            break;
-        } else if (headerValue === '' || headerValue === null) {
-            // Première colonne vide trouvée = nouveau jour
-            startColumn = col;
-            console.log(`📅 Nouveau jour de scraping: ${dateStr}`);
-            console.log(`   → Ajout de 7 nouvelles colonnes (${col + 1} à ${col + 7}) pour conserver l'historique\n`);
-            break;
-        }
+        // Insérer 7 colonnes après la colonne A (index 1)
+        await sheet.insertDimension('COLUMNS', { startIndex: 1, endIndex: 8 }, false);
+
+        console.log(`   ✅ 7 colonnes insérées, rechargement des cellules...\n`);
+
+        // Recharger les cellules après l'insertion
+        await sheet.loadCells(`A1:H${maxRows}`);
     }
 
-    // Mettre à jour les en-têtes pour les 7 pays
+    // Mettre à jour les en-têtes pour les 7 pays (toujours dans B-H)
     const countryNames = ['France', 'États-Unis', 'Allemagne', 'Royaume-Uni', 'Italie', 'Pays-Bas', 'Espagne'];
     for (let i = 0; i < 7; i++) {
-        sheet.getCell(0, startColumn + i).value = `${countryNames[i]} (${dateStr})`;
+        sheet.getCell(0, 1 + i).value = `${countryNames[i]} (${dateStr})`;
     }
     await sheet.saveUpdatedCells();
 
-    // Mettre à jour les colonnes dans COUNTRIES pour pointer vers les bonnes colonnes
+    // Mettre à jour les colonnes dans COUNTRIES pour pointer vers B-H (colonnes 1 à 7)
     const countryKeys = ['FR', 'US', 'DE', 'UK', 'IT', 'NL', 'ES'];
     countryKeys.forEach((key, index) => {
-        COUNTRIES[key].column = startColumn + index;
+        COUNTRIES[key].column = 1 + index; // Colonnes B à H (index 1 à 7)
     });
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
@@ -463,11 +461,18 @@ async function main() {
         for (const [countryCode, config] of Object.entries(COUNTRIES)) {
             const cell = sheet.getCell(row, config.column);
 
-            // Si déjà scrapé aujourd'hui ET que la cellule a une valeur, on skip
+            // Si déjà scrapé aujourd'hui ET que la cellule a une valeur
             if (alreadyScrapedToday && cell.value && cell.value.toString().trim() !== '') {
-                console.log(`  ⏭️  ${config.name}: Déjà scrapé (${cell.value})`);
-                skippedSearches++;
-                continue;
+                const cellValue = cell.value.toString().trim();
+
+                // Ne skip que si ce n'est PAS une erreur de quota épuisé
+                if (!cellValue.includes('Erreur: Tous les quotas épuisés')) {
+                    console.log(`  ⏭️  ${config.name}: Déjà scrapé (${cell.value})`);
+                    skippedSearches++;
+                    continue;
+                } else {
+                    console.log(`  🔄  ${config.name}: Tentative de re-scraping (quota était épuisé)`);
+                }
             }
 
             // Faire la recherche
