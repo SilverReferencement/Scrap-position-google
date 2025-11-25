@@ -611,40 +611,45 @@ async function main() {
         console.log(`   → ${date}: somme = ${totalPositions}`);
     }
 
-    // Charger la feuille Graphique
+    // Charger la feuille Graphique (fraîchement pour éviter les conflits)
     await graphSheet.loadCells('A1:B1000');
 
-    // Mettre à jour toutes les dates dans la feuille Graphique
-    for (const [date, data] of Object.entries(dateSums)) {
-        // Chercher si la date existe déjà
-        let dateRow = -1;
-
-        for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
-            const dateCell = graphSheet.getCell(i, 0);
+    // Construire un map des dates existantes pour éviter les lectures multiples
+    const existingDatesMap = {};
+    for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
+        const dateCell = graphSheet.getCell(i, 0);
+        try {
             const cellValue = dateCell.value;
-
-            if (cellValue && cellValue.toString().trim() === date) {
-                dateRow = i;
+            if (cellValue && cellValue !== '') {
+                existingDatesMap[cellValue.toString().trim()] = i;
+            } else if (!cellValue || cellValue === '') {
+                // Première ligne vide trouvée
                 break;
             }
+        } catch (e) {
+            // Ignorer les erreurs de lecture
+            break;
         }
+    }
 
-        // Si la date n'existe pas, trouver la première ligne vide
-        if (dateRow === -1) {
-            for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
-                const dateCell = graphSheet.getCell(i, 0);
-                if (!dateCell.value || dateCell.value === '') {
-                    dateRow = i;
-                    break;
-                }
-            }
+    // Mettre à jour toutes les dates dans la feuille Graphique
+    let nextEmptyRow = Object.keys(existingDatesMap).length + 1;
+
+    for (const [date, data] of Object.entries(dateSums)) {
+        let dateRow = -1;
+
+        // Chercher si la date existe déjà
+        if (existingDatesMap[date] !== undefined) {
+            dateRow = existingDatesMap[date];
+        } else {
+            // Nouvelle date : utiliser la prochaine ligne vide
+            dateRow = nextEmptyRow;
+            nextEmptyRow++;
         }
 
         // Écrire la date et la somme
-        if (dateRow !== -1) {
-            graphSheet.getCell(dateRow, 0).value = date;
-            graphSheet.getCell(dateRow, 1).value = data.sum;
-        }
+        graphSheet.getCell(dateRow, 0).value = date;
+        graphSheet.getCell(dateRow, 1).value = data.sum;
     }
 
     await graphSheet.saveUpdatedCells();
