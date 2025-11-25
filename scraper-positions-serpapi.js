@@ -616,46 +616,33 @@ async function main() {
     const theoreticalBest = keywords.length * 7 * 1; // 45 SKU × 7 pays × position 1 = 315
     console.log(`   → Objectif théorique (toutes positions #1): ${theoreticalBest}`);
 
+    // Trier les dates par ordre chronologique (DD/MM/YY)
+    const sortedDates = Object.keys(dateSums).sort((a, b) => {
+        // Convertir DD/MM/YY en objet Date pour comparaison
+        const [dayA, monthA, yearA] = a.split('/').map(n => parseInt(n));
+        const [dayB, monthB, yearB] = b.split('/').map(n => parseInt(n));
+
+        const dateA = new Date(2000 + yearA, monthA - 1, dayA);
+        const dateB = new Date(2000 + yearB, monthB - 1, dayB);
+
+        return dateA - dateB; // Ordre croissant (plus ancienne d'abord)
+    });
+
+    console.log(`   → Dates triées par ordre chronologique: ${sortedDates.join(', ')}`);
+
     // Charger la feuille Graphique (fraîchement pour éviter les conflits)
     await graphSheet.loadCells('A1:C1000');
 
-    // Construire un map des dates existantes pour éviter les lectures multiples
-    const existingDatesMap = {};
-    for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
-        const dateCell = graphSheet.getCell(i, 0);
-        try {
-            const cellValue = dateCell.value;
-            if (cellValue && cellValue !== '') {
-                existingDatesMap[cellValue.toString().trim()] = i;
-            } else if (!cellValue || cellValue === '') {
-                // Première ligne vide trouvée
-                break;
-            }
-        } catch (e) {
-            // Ignorer les erreurs de lecture
-            break;
-        }
-    }
-
-    // Mettre à jour toutes les dates dans la feuille Graphique
-    let nextEmptyRow = Object.keys(existingDatesMap).length + 1;
-
-    for (const [date, data] of Object.entries(dateSums)) {
-        let dateRow = -1;
-
-        // Chercher si la date existe déjà
-        if (existingDatesMap[date] !== undefined) {
-            dateRow = existingDatesMap[date];
-        } else {
-            // Nouvelle date : utiliser la prochaine ligne vide
-            dateRow = nextEmptyRow;
-            nextEmptyRow++;
-        }
+    // Écrire toutes les dates dans l'ordre chronologique
+    for (let i = 0; i < sortedDates.length; i++) {
+        const date = sortedDates[i];
+        const data = dateSums[date];
+        const rowIndex = i + 1; // Ligne 2, 3, 4, etc.
 
         // Écrire la date, la somme et l'objectif
-        graphSheet.getCell(dateRow, 0).value = date;
-        graphSheet.getCell(dateRow, 1).value = data.sum;
-        graphSheet.getCell(dateRow, 2).value = theoreticalBest; // Colonne C : objectif
+        graphSheet.getCell(rowIndex, 0).value = date;
+        graphSheet.getCell(rowIndex, 1).value = data.sum;
+        graphSheet.getCell(rowIndex, 2).value = theoreticalBest; // Colonne C : objectif
     }
 
     await graphSheet.saveUpdatedCells();
