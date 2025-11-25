@@ -566,34 +566,31 @@ async function main() {
     // Charger la feuille Graphique pour vérifier si la date existe
     await graphSheet.loadCells('A1:B1000');
 
-    // Chercher si la date existe déjà
+    // Chercher si la date existe déjà ou trouver la première ligne vide
     let dateRow = -1;
+    let firstEmptyRow = -1;
+
     for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
         const dateCell = graphSheet.getCell(i, 0);
-        if (dateCell.value && dateCell.value.toString().trim() === dateStr) {
+        const cellValue = dateCell.value;
+
+        if (cellValue && cellValue.toString().trim() === dateStr) {
+            // Date trouvée, on va mettre à jour cette ligne
             dateRow = i;
+            console.log(`   → Date ${dateStr} trouvée à la ligne ${i + 1}, mise à jour...`);
             break;
         }
-        // Si cellule vide, c'est la première ligne disponible
-        if (!dateCell.value || dateCell.value === '') {
-            if (dateRow === -1) {
-                dateRow = i;
-            }
-            break;
+
+        // Mémoriser la première ligne vide
+        if (firstEmptyRow === -1 && (!cellValue || cellValue === '')) {
+            firstEmptyRow = i;
         }
     }
 
-    // Si date non trouvée, ajouter à la fin
+    // Si la date n'existe pas, utiliser la première ligne vide
     if (dateRow === -1) {
-        dateRow = 1; // Ligne 2 (index 1)
-        // Chercher la dernière ligne utilisée
-        for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
-            const dateCell = graphSheet.getCell(i, 0);
-            if (!dateCell.value || dateCell.value === '') {
-                dateRow = i;
-                break;
-            }
-        }
+        dateRow = firstEmptyRow !== -1 ? firstEmptyRow : 1;
+        console.log(`   → Nouvelle date ${dateStr} ajoutée à la ligne ${dateRow + 1}`);
     }
 
     // Écrire la date et la somme
@@ -601,7 +598,7 @@ async function main() {
     graphSheet.getCell(dateRow, 1).value = totalPositions;
     await graphSheet.saveUpdatedCells();
 
-    console.log(`   ✓ Feuille "Graphique" mise à jour (ligne ${dateRow + 1})`);
+    console.log(`   ✓ Feuille "Graphique" mise à jour: ${dateStr} → ${totalPositions}`);
 
     console.log(`🔗 Google Sheet mis à jour: https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`);
 }
