@@ -642,7 +642,17 @@ async function main() {
     console.log(`   → Dates triées par ordre chronologique: ${sortedDates.join(', ')}`);
 
     // Charger la feuille Graphique (fraîchement pour éviter les conflits)
-    await graphSheet.loadCells('A1:F1000');
+    const maxRowsGraph = Math.min(graphSheet.rowCount, 1000);
+    const colLetterGraph = columnToLetter(5); // Colonne F
+    await graphSheet.loadCells(`A1:${colLetterGraph}${maxRowsGraph}`);
+
+    // Nettoyer toutes les anciennes données (garder les en-têtes)
+    console.log('   → Nettoyage des anciennes données...');
+    for (let row = 1; row < maxRowsGraph; row++) {
+        for (let col = 0; col < 6; col++) {
+            graphSheet.getCell(row, col).value = null;
+        }
+    }
 
     // Écrire toutes les dates dans l'ordre chronologique
     for (let i = 0; i < sortedDates.length; i++) {
