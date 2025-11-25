@@ -518,6 +518,91 @@ async function main() {
     // Afficher les quotas finaux
     displayQuotas();
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Mise à jour de la feuille "Graphique"
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    console.log('\n📊 Mise à jour de la feuille "Graphique"...');
+
+    // Accéder ou créer la feuille "Graphique"
+    let graphSheet = doc.sheetsByTitle['Graphique'];
+    if (!graphSheet) {
+        console.log('   → Création de la feuille "Graphique"...');
+        graphSheet = await doc.addSheet({ title: 'Graphique' });
+
+        // Ajouter les en-têtes
+        await graphSheet.loadCells('A1:B1');
+        graphSheet.getCell(0, 0).value = 'Date';
+        graphSheet.getCell(0, 1).value = 'Somme des positions';
+        await graphSheet.saveUpdatedCells();
+    }
+
+    // Calculer la somme totale des positions du jour
+    let totalPositions = 0;
+    for (let i = 0; i < keywords.length; i++) {
+        const row = keywords[i].row;
+
+        for (const [countryCode, config] of Object.entries(COUNTRIES)) {
+            const cell = sheet.getCell(row, config.column);
+            const value = cell.value;
+
+            if (!value || value === '' || value === null) {
+                totalPositions += 25; // Valeur vide = 25
+            } else if (typeof value === 'number') {
+                totalPositions += value;
+            } else {
+                const strValue = value.toString().trim();
+                if (strValue === 'N/A' || strValue.startsWith('Erreur:') || strValue.startsWith('✗')) {
+                    totalPositions += 25; // N/A ou erreur = 25
+                } else {
+                    const numValue = parseInt(strValue);
+                    totalPositions += isNaN(numValue) ? 25 : numValue;
+                }
+            }
+        }
+    }
+
+    console.log(`   ✓ Somme totale calculée: ${totalPositions}`);
+
+    // Charger la feuille Graphique pour vérifier si la date existe
+    await graphSheet.loadCells('A1:B1000');
+
+    // Chercher si la date existe déjà
+    let dateRow = -1;
+    for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
+        const dateCell = graphSheet.getCell(i, 0);
+        if (dateCell.value && dateCell.value.toString().trim() === dateStr) {
+            dateRow = i;
+            break;
+        }
+        // Si cellule vide, c'est la première ligne disponible
+        if (!dateCell.value || dateCell.value === '') {
+            if (dateRow === -1) {
+                dateRow = i;
+            }
+            break;
+        }
+    }
+
+    // Si date non trouvée, ajouter à la fin
+    if (dateRow === -1) {
+        dateRow = 1; // Ligne 2 (index 1)
+        // Chercher la dernière ligne utilisée
+        for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
+            const dateCell = graphSheet.getCell(i, 0);
+            if (!dateCell.value || dateCell.value === '') {
+                dateRow = i;
+                break;
+            }
+        }
+    }
+
+    // Écrire la date et la somme
+    graphSheet.getCell(dateRow, 0).value = dateStr;
+    graphSheet.getCell(dateRow, 1).value = totalPositions;
+    await graphSheet.saveUpdatedCells();
+
+    console.log(`   ✓ Feuille "Graphique" mise à jour (ligne ${dateRow + 1})`);
+
     console.log(`🔗 Google Sheet mis à jour: https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`);
 }
 
