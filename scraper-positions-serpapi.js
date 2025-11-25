@@ -532,73 +532,104 @@ async function main() {
         // Ajouter les en-têtes
         await graphSheet.loadCells('A1:B1');
         graphSheet.getCell(0, 0).value = 'Date';
-        graphSheet.getCell(0, 1).value = 'Somme des positions';
+        graphSheet.getCell(0, 1).value = 'Somme de toutes les positions';
         await graphSheet.saveUpdatedCells();
     }
 
-    // Calculer la somme totale des positions du jour
-    let totalPositions = 0;
-    for (let i = 0; i < keywords.length; i++) {
-        const row = keywords[i].row;
+    // Extraire toutes les dates des en-têtes de la feuille principale
+    console.log('   → Extraction de toutes les dates historiques...');
+    const dateRegex = /\((\d{2}\/\d{2}\/\d{2})\)/; // Regex pour extraire (DD/MM/YY)
+    const dateSums = {}; // { "25/11/25": { sum: 0, columns: [1, 2, 3...] } }
 
-        for (const [countryCode, config] of Object.entries(COUNTRIES)) {
-            const cell = sheet.getCell(row, config.column);
-            const value = cell.value;
+    // Parcourir les en-têtes (ligne 1) pour trouver toutes les dates
+    for (let col = 1; col < Math.min(sheet.columnCount, 200); col++) {
+        const headerCell = sheet.getCell(0, col);
+        const headerValue = headerCell.value?.toString() || '';
 
-            if (!value || value === '' || value === null) {
-                totalPositions += 25; // Valeur vide = 25
-            } else if (typeof value === 'number') {
-                totalPositions += value;
-            } else {
-                const strValue = value.toString().trim();
-                if (strValue === 'N/A' || strValue.startsWith('Erreur:') || strValue.startsWith('✗')) {
-                    totalPositions += 25; // N/A ou erreur = 25
+        const match = headerValue.match(dateRegex);
+        if (match) {
+            const dateFound = match[1]; // Extraire "25/11/25"
+
+            if (!dateSums[dateFound]) {
+                dateSums[dateFound] = { sum: 0, columns: [] };
+            }
+            dateSums[dateFound].columns.push(col);
+        }
+    }
+
+    const datesFound = Object.keys(dateSums);
+    console.log(`   ✓ ${datesFound.length} date(s) trouvée(s): ${datesFound.join(', ')}`);
+
+    // Calculer la somme pour chaque date
+    for (const [date, data] of Object.entries(dateSums)) {
+        let totalPositions = 0;
+
+        for (let i = 0; i < keywords.length; i++) {
+            const row = keywords[i].row;
+
+            // Parcourir toutes les colonnes de cette date (7 colonnes par date)
+            for (const col of data.columns) {
+                const cell = sheet.getCell(row, col);
+                const value = cell.value;
+
+                if (!value || value === '' || value === null) {
+                    totalPositions += 25; // Valeur vide = 25
+                } else if (typeof value === 'number') {
+                    totalPositions += value;
                 } else {
-                    const numValue = parseInt(strValue);
-                    totalPositions += isNaN(numValue) ? 25 : numValue;
+                    const strValue = value.toString().trim();
+                    if (strValue === 'N/A' || strValue.startsWith('Erreur:') || strValue.startsWith('✗')) {
+                        totalPositions += 25; // N/A ou erreur = 25
+                    } else {
+                        const numValue = parseInt(strValue);
+                        totalPositions += isNaN(numValue) ? 25 : numValue;
+                    }
                 }
             }
         }
+
+        dateSums[date].sum = totalPositions;
+        console.log(`   → ${date}: somme = ${totalPositions}`);
     }
 
-    console.log(`   ✓ Somme totale calculée: ${totalPositions}`);
-
-    // Charger la feuille Graphique pour vérifier si la date existe
+    // Charger la feuille Graphique
     await graphSheet.loadCells('A1:B1000');
 
-    // Chercher si la date existe déjà ou trouver la première ligne vide
-    let dateRow = -1;
-    let firstEmptyRow = -1;
+    // Mettre à jour toutes les dates dans la feuille Graphique
+    for (const [date, data] of Object.entries(dateSums)) {
+        // Chercher si la date existe déjà
+        let dateRow = -1;
 
-    for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
-        const dateCell = graphSheet.getCell(i, 0);
-        const cellValue = dateCell.value;
+        for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
+            const dateCell = graphSheet.getCell(i, 0);
+            const cellValue = dateCell.value;
 
-        if (cellValue && cellValue.toString().trim() === dateStr) {
-            // Date trouvée, on va mettre à jour cette ligne
-            dateRow = i;
-            console.log(`   → Date ${dateStr} trouvée à la ligne ${i + 1}, mise à jour...`);
-            break;
+            if (cellValue && cellValue.toString().trim() === date) {
+                dateRow = i;
+                break;
+            }
         }
 
-        // Mémoriser la première ligne vide
-        if (firstEmptyRow === -1 && (!cellValue || cellValue === '')) {
-            firstEmptyRow = i;
+        // Si la date n'existe pas, trouver la première ligne vide
+        if (dateRow === -1) {
+            for (let i = 1; i < Math.min(graphSheet.rowCount, 1000); i++) {
+                const dateCell = graphSheet.getCell(i, 0);
+                if (!dateCell.value || dateCell.value === '') {
+                    dateRow = i;
+                    break;
+                }
+            }
+        }
+
+        // Écrire la date et la somme
+        if (dateRow !== -1) {
+            graphSheet.getCell(dateRow, 0).value = date;
+            graphSheet.getCell(dateRow, 1).value = data.sum;
         }
     }
 
-    // Si la date n'existe pas, utiliser la première ligne vide
-    if (dateRow === -1) {
-        dateRow = firstEmptyRow !== -1 ? firstEmptyRow : 1;
-        console.log(`   → Nouvelle date ${dateStr} ajoutée à la ligne ${dateRow + 1}`);
-    }
-
-    // Écrire la date et la somme
-    graphSheet.getCell(dateRow, 0).value = dateStr;
-    graphSheet.getCell(dateRow, 1).value = totalPositions;
     await graphSheet.saveUpdatedCells();
-
-    console.log(`   ✓ Feuille "Graphique" mise à jour: ${dateStr} → ${totalPositions}`);
+    console.log(`   ✓ Feuille "Graphique" mise à jour avec ${datesFound.length} date(s)`);
 
     console.log(`🔗 Google Sheet mis à jour: https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`);
 }
