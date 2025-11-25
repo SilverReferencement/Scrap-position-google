@@ -530,9 +530,10 @@ async function main() {
         graphSheet = await doc.addSheet({ title: 'Graphique' });
 
         // Ajouter les en-têtes
-        await graphSheet.loadCells('A1:B1');
+        await graphSheet.loadCells('A1:C1');
         graphSheet.getCell(0, 0).value = 'Date';
         graphSheet.getCell(0, 1).value = 'Somme de toutes les positions';
+        graphSheet.getCell(0, 2).value = 'Objectif (Position #1 partout)';
         await graphSheet.saveUpdatedCells();
     }
 
@@ -611,8 +612,12 @@ async function main() {
         console.log(`   → ${date}: somme = ${totalPositions}`);
     }
 
+    // Calculer l'objectif théorique (toutes positions à #1)
+    const theoreticalBest = keywords.length * 7 * 1; // 45 SKU × 7 pays × position 1 = 315
+    console.log(`   → Objectif théorique (toutes positions #1): ${theoreticalBest}`);
+
     // Charger la feuille Graphique (fraîchement pour éviter les conflits)
-    await graphSheet.loadCells('A1:B1000');
+    await graphSheet.loadCells('A1:C1000');
 
     // Construire un map des dates existantes pour éviter les lectures multiples
     const existingDatesMap = {};
@@ -647,9 +652,10 @@ async function main() {
             nextEmptyRow++;
         }
 
-        // Écrire la date et la somme
+        // Écrire la date, la somme et l'objectif
         graphSheet.getCell(dateRow, 0).value = date;
         graphSheet.getCell(dateRow, 1).value = data.sum;
+        graphSheet.getCell(dateRow, 2).value = theoreticalBest; // Colonne C : objectif
     }
 
     await graphSheet.saveUpdatedCells();
