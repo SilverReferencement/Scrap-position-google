@@ -39,6 +39,7 @@ jobs:
           echo "SERPAPI_KEY2=${{ secrets.SERPAPI_KEY2 }}" >> .env
           echo "SERPAPI_KEY3=${{ secrets.SERPAPI_KEY3 }}" >> .env
           echo "SERPAPI_KEY4=${{ secrets.SERPAPI_KEY4 }}" >> .env
+          echo "SERPAPI_KEY5=${{ secrets.SERPAPI_KEY5 }}" >> .env
           echo "TARGET_DOMAIN=fix-my-kea.com" >> .env
 
       - name: 🚀 Exécution du scraping avec SerpApi
