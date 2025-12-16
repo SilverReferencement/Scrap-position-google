@@ -58,11 +58,11 @@ Utilisez cette checklist pour vous assurer que tout est bien configuré.
 - [ ] Les positions s'affichent correctement dans le Google Sheet
 - [ ] Les 5 colonnes (B-F) sont remplies pour chaque mot-clé
 - [ ] Les en-têtes contiennent la date de scraping
-- [ ] Le workflow est programmé pour s'exécuter chaque lundi à 8h
+- [ ] Le workflow est programmé pour s'exécuter le 5 du mois à 6h
 
 ## 📊 Monitoring
 
-- [ ] Premier scraping automatique (lundi prochain) vérifié
+- [ ] Premier scraping automatique (le 5 du mois prochain) vérifié
 - [ ] Notifications GitHub configurées (optionnel)
 - [ ] Logs des exécutions consultés régulièrement
 
@@ -72,7 +72,7 @@ Utilisez cette checklist pour vous assurer que tout est bien configuré.
 
 **Félicitations ! Votre automatisation est opérationnelle ! 🎉**
 
-Le script s'exécutera automatiquement chaque lundi à 8h, et vous pouvez le lancer manuellement à tout moment depuis GitHub Actions.
+Le script s'exécutera automatiquement le 5 du mois à 6h (heure de Paris), et vous pouvez le lancer manuellement à tout moment depuis GitHub Actions.
 
 ---
 

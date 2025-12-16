@@ -57,7 +57,7 @@ Automatisation scraping position google/
 - En-têtes avec date de scraping
 
 ### ✅ Automatisation GitHub Actions
-- Exécution hebdomadaire : **Tous les lundis à 8h00** (heure de Paris)
+- Exécution mensuelle : **Le 5 de chaque mois à 6h00** (heure de Paris)
 - Exécution manuelle à la demande
 - Logs détaillés pour chaque exécution
 

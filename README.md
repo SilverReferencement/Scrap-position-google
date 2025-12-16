@@ -6,7 +6,7 @@ Automatisation pour tracker les positions Google du site **fix-my-kea.com** sur 
 
 - ✅ Scraping automatique des positions Google par pays
 - ✅ Mise à jour automatique dans Google Sheets
-- ✅ Exécution hebdomadaire via GitHub Actions
+- ✅ Exécution mensuelle (le 5 du mois) via GitHub Actions
 - ✅ Possibilité de lancer manuellement à la demande
 - ✅ Support multi-pays : FR, US, DE, UK, IT
 
@@ -87,7 +87,7 @@ Aller dans **Settings > Secrets and variables > Actions** et ajouter :
 ### 3. Activer GitHub Actions
 
 Le workflow s'exécutera :
-- **Automatiquement** : Tous les lundis à 8h00 (heure de Paris)
+- **Automatiquement** : Le 5 de chaque mois à 6h00 (heure de Paris)
 - **Manuellement** : Via l'onglet "Actions" de votre repository
 
 ## 📊 Structure du Google Sheet
@@ -139,7 +139,7 @@ Le workflow s'exécutera :
 
 ```yaml
 schedule:
-  - cron: '0 8 * * 1'  # Tous les lundis à 8h00
+  - cron: '0 5 5 * *'  # Le 5 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
 ```
 
 Format cron : `minute heure jour mois jour_semaine`

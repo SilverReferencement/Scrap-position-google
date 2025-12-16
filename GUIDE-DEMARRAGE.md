@@ -115,7 +115,7 @@ git push -u origin main
 2. Cliquer sur **Scraping Positions Google** dans la liste des workflows
 3. Cliquer sur **Run workflow** pour tester manuellement
 
-✅ Si tout fonctionne, le workflow s'exécutera automatiquement **tous les lundis à 8h00** !
+✅ Si tout fonctionne, le workflow s'exécutera automatiquement **le 5 du mois à 6h00 (heure de Paris)** !
 
 ## 🔧 Personnalisation
 
@@ -125,13 +125,13 @@ git push -u origin main
 
 ```yaml
 schedule:
-  - cron: '0 7 * * 1'  # Tous les lundis à 8h (heure de Paris)
+  - cron: '0 5 5 * *'  # Le 5 de chaque mois à 5h UTC (6h heure de Paris hiver / 7h été)
 ```
 
 Exemples :
-- `0 7 * * *` : Tous les jours à 8h
-- `0 7 * * 1,4` : Lundis et jeudis à 8h
-- `0 7 1 * *` : Le 1er de chaque mois à 8h
+- `0 5 * * *` : Tous les jours à 5h UTC
+- `0 5 1 * *` : Le 1er de chaque mois à 5h UTC
+- `0 5 5 * *` : Le 5 de chaque mois à 5h UTC
 
 ### Ajouter un nouveau pays
 

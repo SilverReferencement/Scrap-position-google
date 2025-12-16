@@ -1,11 +1,9 @@
 name: Scraping Positions Google
 
 on:
-  # Exécution 3 fois par mois : les 5, 15 et 25 de chaque mois à 6h00 (heure de Paris)
+  # Exécution 1 fois par mois : le 5 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
   schedule:
-    - cron: '0 5 5 * *'   # Le 5 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
-    - cron: '0 5 15 * *'  # Le 15 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
-    - cron: '0 5 25 * *'  # Le 25 de chaque mois à 5h UTC (6h Paris hiver / 7h Paris été)
+    - cron: '0 5 5 * *'   # Le 5 de chaque mois à 5h UTC
 
   # Exécution manuelle à la demande
   workflow_dispatch:
