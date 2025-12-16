@@ -6,11 +6,16 @@ async function getQuotas() {
 
     // Génère dynamiquement jusqu'à 10 clés
     const keys = [];
+    const missingKeys = [];
+
     for (let i = 1; i <= 10; i++) {
         const envKey = i === 1 ? 'SERPAPI_KEY' : `SERPAPI_KEY${i}`;
         const key = process.env[envKey];
         if (key) {
             keys.push({ name: `Compte ${i}`, envKey, key });
+        } else if (i <= 5) {
+            // Les 5 premiers comptes sont attendus
+            missingKeys.push(envKey);
         }
     }
 
@@ -113,6 +118,7 @@ async function getQuotas() {
     console.log('═══════════════════════════════════════════════════════════════');
     console.log(`📊 RÉSUMÉ TOTAL:`);
     console.log(`   • Comptes actifs: ${keys.length}`);
+    console.log(`   • Comptes manquants: ${missingKeys.length}`);
     console.log(`   • Recherches restantes: ${totalRemaining}`);
 
     if (nextRenewalDate) {
@@ -129,10 +135,34 @@ async function getQuotas() {
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('');
 
+    // Affiche les clés manquantes
+    if (missingKeys.length > 0) {
+        console.log(`⚠️  ${missingKeys.length} clé(s) manquante(s):\n`);
+        for (const missingKey of missingKeys) {
+            console.log(`   • ${missingKey}`);
+        }
+        console.log('');
+        console.log('📌 SOLUTION:');
+        console.log('   1. Allez dans GitHub > Settings > Secrets and variables > Actions');
+        console.log('   2. Récupérez les clés SerpApi manquantes');
+        console.log('   3. Ajoutez-les à votre fichier .env local:');
+        console.log('');
+        for (const missingKey of missingKeys) {
+            console.log(`      ${missingKey}=votre_cle_ici`);
+        }
+        console.log('');
+        console.log('   Ou créez des comptes gratuits sur https://serpapi.com/');
+        console.log('');
+    }
+
     // Avertissement si épuisé
     if (totalRemaining < 100) {
         console.log('⚠️  ATTENTION: Budget faible! Vous avez moins de 100 recherches disponibles.');
         console.log('');
+    }
+
+    if (keys.length >= 5) {
+        console.log('✅ Tous les 5 comptes SerpApi sont configurés!');
     }
 
     console.log('💡 Conseil: Exécutez ce script régulièrement pour surveiller votre consommation');
