@@ -28,7 +28,6 @@ async function getQuotas() {
     console.log(`📌 ${keys.length} compte(s) détecté(s)\n`);
 
     let totalRemaining = 0;
-    let nextRenewalDate = null;
     const accountsInfo = [];
 
     for (const { name, envKey, key } of keys) {
@@ -40,20 +39,12 @@ async function getQuotas() {
 
             const data = response.data;
             const remaining = data.total_searches_left || 0;
-            const plan = data.plan || 'Free';
-            const monthlyUsed = data.searches_used || 0;
-            const monthlyLimit = data.monthly_limit || 0;
-            const resetDate = data.reset_date || null;
+            const plan = data.plan_name || 'Free';
+            const monthlyUsed = data.this_month_usage || 0;
+            const monthlyLimit = data.searches_per_month || 250;
+            const accountStatus = data.account_status || '';
 
             totalRemaining += remaining;
-
-            // Détermine le prochain renouvellement
-            if (resetDate) {
-                const resetDateObj = new Date(resetDate);
-                if (!nextRenewalDate || resetDateObj < nextRenewalDate) {
-                    nextRenewalDate = resetDateObj;
-                }
-            }
 
             // Statut visuel
             let status = '✅';
@@ -67,7 +58,7 @@ async function getQuotas() {
                 plan,
                 monthlyUsed,
                 monthlyLimit,
-                resetDate,
+                accountStatus,
                 envKey
             });
 
@@ -93,22 +84,14 @@ async function getQuotas() {
             console.log(`   Plan: ${info.plan}`);
             console.log(`   📍 Recherches restantes: ${info.remaining}`);
 
+            if (info.accountStatus) {
+                console.log(`   ℹ️  Statut: ${info.accountStatus}`);
+            }
+
             if (info.monthlyLimit > 0) {
                 const percentUsed = ((info.monthlyUsed / info.monthlyLimit) * 100).toFixed(1);
                 const percentRemaining = (100 - percentUsed).toFixed(1);
                 console.log(`   📊 Quota mensuel: ${info.monthlyUsed}/${info.monthlyLimit} (${percentUsed}% utilisé, ${percentRemaining}% restant)`);
-            }
-
-            if (info.resetDate) {
-                const resetDateObj = new Date(info.resetDate);
-                const dateFormatted = resetDateObj.toLocaleDateString('fr-FR', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-                const now = new Date();
-                const daysUntil = Math.ceil((resetDateObj - now) / (1000 * 60 * 60 * 24));
-                console.log(`   🔄 Renouvellement: ${dateFormatted} (dans ${daysUntil} jour(s))`);
             }
         }
         console.log('');
@@ -121,16 +104,16 @@ async function getQuotas() {
     console.log(`   • Comptes manquants: ${missingKeys.length}`);
     console.log(`   • Recherches restantes: ${totalRemaining}`);
 
-    if (nextRenewalDate) {
-        const dateFormatted = nextRenewalDate.toLocaleDateString('fr-FR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-        const now = new Date();
-        const daysUntil = Math.ceil((nextRenewalDate - now) / (1000 * 60 * 60 * 24));
-        console.log(`   • Prochain renouvellement: ${dateFormatted} (dans ${daysUntil} jour(s))`);
-    }
+    // Calcule le prochain renouvellement
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const dateFormatted = nextMonth.toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    const daysUntil = Math.ceil((nextMonth - now) / (1000 * 60 * 60 * 24));
+    console.log(`   • Prochain renouvellement: ${dateFormatted} (dans ${daysUntil} jour(s))`);
 
     console.log('═══════════════════════════════════════════════════════════════');
     console.log('');
